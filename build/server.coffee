@@ -12,8 +12,11 @@ exec = require('child_process').exec
 trim = (str)->str.replace(/(^\s+|\s+$)/,'')
 
 processData = (data, method, response) ->
+	out = ""
 	params = qs.parse data
-	console.dir "processing req #{method}:#{params}"
+	console.dir "processing req #{method}:"
+	for key,val of params
+		console.log "\t#{key}=#{val}"
 	try 
 		console.log "processing request for #{params.action}"
 		switch method
@@ -25,24 +28,20 @@ processData = (data, method, response) ->
 						out = coffee.compile params.content
 					when 'fileList'
 						list = {}
-						fl = fs.readdirSync(params.path)
+						fl = fs.readdirSync params.path
 						for f in fl
 							try
 								stats = fs.statSync "#{params.path}/#{f}"
 								list[f] = if stats.isDirectory() then 'directory' else 'file'
 							catch e
 								console.err e
-						out = JSON.stringify list 
-						# console.log("got file list:#{out.toString()}")
+						out = list 
+						console.log("got file list:#{out.toString()}")
 					when 'log'
 						console.log "LOG:#{params.message}"
 						out = ""
 					when 'getHome'
-						out = JSON.stringify {home:home}
-			when 'PUT'
-				switch params.action
-					when null
-						out = "specify the action jerko"
+						out = {home:home}
 					when 'save'
 						if params.fn is null
 							out = "filename missing"
@@ -50,20 +49,24 @@ processData = (data, method, response) ->
 							out = "no file content found!"
 						else
 							console.log "saving file #{params.fn}"
-							fs.writeFile params.fn, params.content, (err) ->
-								if err?
-									console.log err
-									out = "err"
-								else 
-									out = "save complete"
-									console.log out
-			
-			
+							fs.writeFileSync params.fn, params.content
+							out = "save complete"
+					when 'open'
+						if params.fn is null
+							out = "filename missing"
+						else if params.content is null
+							out = "no file content found!"
+						else
+							console.log "opening file #{params.fn}"
+							content = fs.readFileSync params.fn, 'utf8'
+							console.log "got content \n #{content}"
+							out = {content:content}
 	catch e
 		console.log e.stack
 		out = e.message
-		
-	response.end out
+	
+	response.end JSON.stringify out
+	console.log "sending back #{out}"
 	
 
 ############ MAIN ############
@@ -71,7 +74,7 @@ processData = (data, method, response) ->
 home = null;
 exec 'cd;pwd',(e,so,se)->
 	home = trim(so)
-	console.log home
+	console.log "home folder is #{home}"
 
 	
 http.createServer( (req, res) ->

@@ -17,9 +17,11 @@ compile = ->
 	try
 		compiled = CoffeeScript.compile(editor.getSession().getValue(), bare:on)
 		output.getSession().setValue(compiled)
+		# debugDiv.html("")
 	catch error
 		msg = error.message
-		output.getSession().setValue(msg)
+		# output.getSession().setValue(msg)
+		debugDiv.html(msg)
 		# line = msg.match(/line ([0-9]+)/)
 		# if line isnt null and line.length > 0
 			
@@ -33,7 +35,7 @@ sendReq = (data,method,callback)->
 		timeout:3000
 		success:(data, text)->
 			# output.getSession().setValue data.toString()
-			# if data isnt null then debug "#{data.toString()}:#{text}"
+			if data isnt null then debug "#{data.toString()}:#{text}"
 			if callback? then callback data
 		error:(data, err)->
 			debug "REQUEST ERROR:#{data.status},#{data.statusText}"
@@ -44,7 +46,11 @@ serverLog = (msg) ->
 	sendReq {action:'log',message:msg}, "POST"
 
 debug = (msg) ->
-	debugDiv.html "#{debugDiv.html()}\n#{msg}"
+	if typeof(sg) is "object" 
+		for key,val of msg
+			debug "\t#{key}=#{val}"
+	else 
+		debugDiv.html "#{debugDiv.html()}\n#{msg}"
 	# serverLog msg
 	debugDiv.scrollTop debugDiv[0].scrollHeight
 
@@ -66,7 +72,7 @@ closeDialog = ->
 		dialog.remove()
 		dialogIsOpen = false
 
-showSaveWindow = (p) ->
+showFileDialog = (p, callback) ->
 	path = p
 	path = path.replace "//", "/"
 	dialogIsOpen = true
@@ -94,7 +100,7 @@ showSaveWindow = (p) ->
 
 			cb = (file) -> 
 				closeDialog()
-				showSaveWindow(up)
+				showFileDialog(up, callback)
 			
 			table.append(
 				$("<tr></tr>")
@@ -111,11 +117,11 @@ showSaveWindow = (p) ->
 				if type is 'directory'
 					cb = (file) -> 
 						closeDialog()
-						showSaveWindow("#{path}/#{file}")
+						showFileDialog("#{path}/#{file}", callback)
 				else if type is 'file'
 					cb = (file) ->
 						closeDialog()
-						save("#{path}/#{file}")
+						callback("#{path}/#{file}")
 					
 				table.append(
 					$("<tr></tr>")
@@ -131,10 +137,21 @@ showSaveWindow = (p) ->
 		dialog.center()
 
 save = (file) ->
-	sendReq {action:'save', content:editor.getSession().getValue(), fn:file}, 'PUT', (data,err) ->
+	sendReq {action:'save', content:editor.getSession().getValue(), fn:file}, 'POST', (data,err) ->
 		debug 'save returned'
 		if err then debug err
 		debug data
+		
+open = (file) ->
+	sendReq {action:'open', content:editor.getSession().getValue(), fn:file}, 'POST', (data,err) ->
+		debug 'open returned'
+		if err then debug err
+		debug data
+		for key, val of data
+			debug "\t#{key}=#{val}"
+		editor.getSession().setValue(data.content)
+		compile()
+
 
 specialKeyBind = (e) ->
 	code = if e.keyCode then e.keyCode else e.which
@@ -148,7 +165,8 @@ specialKeyBind = (e) ->
 			when 118 then return #v
 			when 67 then return #c
 			when 99 then return #c
-			when 83 then showSaveWindow(path) #s
+			when 79 then showFileDialog(path, open) #O
+			when 83 then showFileDialog(path, save) #s
 			
 		e.preventDefault()
 		e.stopPropagation()
