@@ -17,7 +17,7 @@ compile = ->
 	try
 		compiled = CoffeeScript.compile(editor.getSession().getValue(), bare:on)
 		output.getSession().setValue(compiled)
-		# debugDiv.html("")
+		debugDiv.html("")
 	catch error
 		msg = error.message
 		# output.getSession().setValue(msg)
@@ -192,8 +192,10 @@ specialKeyBind = (e) ->
 input.bind 'keypress keyup', compileKeyBind
 body.bind 'keypress keydown', specialKeyBind
 
-sendReq {action:"getHome"}, 'POST', (data)->
-	path = data.home
+sendReq {action:"getConfig"}, 'POST', (data)->
+	path = data.config.home
+	if data.config.lastFile?
+		open data.config.lastFile
 
 
 

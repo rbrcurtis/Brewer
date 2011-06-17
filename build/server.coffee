@@ -34,6 +34,9 @@ processData = (data, method, response) ->
 						for f in fl
 							try
 								stats = fs.statSync "#{params.path}/#{f}"
+								if stats.isFile() and f.indexOf('.coffee')<1
+									console.log "skipping #{f}"
+									continue
 								list[f] = if stats.isDirectory() then 'directory' else 'file'
 							catch e
 								console.err e
@@ -42,8 +45,8 @@ processData = (data, method, response) ->
 					when 'log'
 						console.log "LOG:#{params.message}"
 						out = ""
-					when 'getHome'
-						out = {home:config.home}
+					when 'getConfig'
+						out = {config:config}
 					when 'save'
 						if params.fn is null
 							out = "filename missing"
@@ -71,8 +74,8 @@ processData = (data, method, response) ->
 	catch e
 		console.log e.stack
 		out = e.message
-	
-	response.end JSON.stringify out
+	out = JSON.stringify out
+	response.end out
 	console.log "sending back #{out}"
 	
 loadConfig = ->
