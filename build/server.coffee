@@ -9,6 +9,8 @@ util = require 'util'
 coffee = require 'coffee-script'
 exec = require('child_process').exec
 
+config = {}
+
 trim = (str)->str.replace(/(^\s+|\s+$)/,'')
 
 processData = (data, method, response) ->
@@ -41,7 +43,7 @@ processData = (data, method, response) ->
 						console.log "LOG:#{params.message}"
 						out = ""
 					when 'getHome'
-						out = {home:home}
+						out = {home:config.home}
 					when 'save'
 						if params.fn is null
 							out = "filename missing"
@@ -51,6 +53,9 @@ processData = (data, method, response) ->
 							console.log "saving file #{params.fn}"
 							fs.writeFileSync params.fn, params.content
 							out = "save complete"
+							config.lastFile = params.fn
+							saveConfig()
+							
 					when 'open'
 						if params.fn is null
 							out = "filename missing"
@@ -61,6 +66,8 @@ processData = (data, method, response) ->
 							content = fs.readFileSync params.fn, 'utf8'
 							console.log "got content \n #{content}"
 							out = {content:content}
+							config.lastFile = params.fn
+							saveConfig()
 	catch e
 		console.log e.stack
 		out = e.message
@@ -68,13 +75,28 @@ processData = (data, method, response) ->
 	response.end JSON.stringify out
 	console.log "sending back #{out}"
 	
+loadConfig = ->
+	fs.readFile ".brewer.conf", (err,data) ->
+		if err
+			exec 'cd;pwd',(e,so,se)->
+				config.home = trim(so)
+				config.lastFile = ''
+				console.log "home folder is #{config.home}"
+				saveConfig()
+		else
+			config = JSON.parse(data)
+			console.log "config loaded"
+
+
+saveConfig = ->
+	fs.writeFile ".brewer.conf", JSON.stringify(config), (err) ->
+		throw err if err
+		console.log "config saved"
+	
 
 ############ MAIN ############
 
-home = null;
-exec 'cd;pwd',(e,so,se)->
-	home = trim(so)
-	console.log "home folder is #{home}"
+loadConfig()
 
 	
 http.createServer( (req, res) ->

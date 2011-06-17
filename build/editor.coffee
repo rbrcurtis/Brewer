@@ -6,7 +6,7 @@ editor = ace.edit "input"
 output = ace.edit "output"
 timer = null
 dialogIsOpen = false
-dialog = $("<div id='dialog'></div>")
+dialog = $("<table id='dialog'></table>")
 path = null
 
 #functions
@@ -131,8 +131,28 @@ showFileDialog = (p, callback) ->
 							$("<td>#{type}</td>").click(->cb(file))
 						)
 				)
-		table.append("<tr><td colspan='2'>New File Name: <input type='text' name='newFN' style='width:100%'/></td></tr>")
-		dialog.append table
+		
+		enterBind = (e) ->
+			code = if e.keyCode then e.keyCode else e.which
+			if code is 13
+				closeDialog()
+
+		dialog.append(
+			$("<tr></tr>").append("<td>New File Name:</td>").append(
+				$("<td></td>").append(
+					$("<input type='text' name='newFN' style='width:95%'/>").bind("keydown",enterBind)
+				)
+			)
+		)
+
+
+		dialog.append(
+		    $("<tr></tr>").append(
+		        $("<td colspan='3'></td>").append(
+		            $("<div style='max-height:400px;overflow-y:scroll;'></div>").append(table)
+		        )
+		    )
+		)
 		body.append dialog
 		dialog.center()
 
@@ -159,14 +179,9 @@ specialKeyBind = (e) ->
 		closeDialog()
 	if e.metaKey
 		switch code
-			when 82 then return #refresh window
-			when 114 then return #refresh window
-			when 86 then return #v
-			when 118 then return #v
-			when 67 then return #c
-			when 99 then return #c
 			when 79 then showFileDialog(path, open) #O
 			when 83 then showFileDialog(path, save) #s
+			else return
 			
 		e.preventDefault()
 		e.stopPropagation()
