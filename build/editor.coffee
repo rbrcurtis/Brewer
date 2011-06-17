@@ -196,6 +196,7 @@ sendReq {action:"getConfig"}, 'POST', (data)->
 	path = data.config.home
 	if data.config.lastFile?
 		open data.config.lastFile
+		path = data.config.lastFile.substring(0,data.config.lastFile.lastIndexOf('/'))
 
 
 
