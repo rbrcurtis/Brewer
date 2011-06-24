@@ -56,8 +56,6 @@ processData = (data, method, response) ->
 							console.log "saving file #{params.fn}"
 							fs.writeFileSync params.fn, params.content
 							out = "save complete"
-							config.lastFile = params.fn
-							saveConfig()
 							
 					when 'open'
 						if params.fn is null
@@ -69,7 +67,7 @@ processData = (data, method, response) ->
 							content = fs.readFileSync params.fn, 'utf8'
 							console.log "got content \n #{content}"
 							out = {content:content}
-							config.lastFile = params.fn
+							updateLastFilesConfig('add', params.fn)
 							saveConfig()
 	catch e
 		console.log e.stack
@@ -83,7 +81,7 @@ loadConfig = ->
 		if err
 			exec 'cd;pwd',(e,so,se)->
 				config.home = trim(so)
-				config.lastFile = ''
+				config.lastFiles = []
 				console.log "home folder is #{config.home}"
 				saveConfig()
 		else
@@ -95,7 +93,21 @@ saveConfig = ->
 	fs.writeFile ".brewer.conf", JSON.stringify(config), (err) ->
 		throw err if err
 		console.log "config saved"
-	
+		
+updateLastFilesConfig = (action, fn) ->
+	console.log "updateLastFileConfig #{action} #{fn}"
+	console.log "lastFiles before update:#{config.lastFiles}"
+	try
+		for i,f in config.lastFiles
+			if f is fn
+				if action is 'add'
+					return
+				else if action is 'del'
+					config.lastFiles.splice i
+		if action is 'add'
+			config.lastFiles.push fn
+	finally
+		console.log "lastFiles after update:#{config.lastFiles}"	
 
 ############ MAIN ############
 
