@@ -69,6 +69,11 @@ processData = (data, method, response) ->
 							out = {content:content}
 							updateLastFilesConfig('add', params.fn)
 							saveConfig()
+					when 'close'
+						if params.fn is null
+							out = "filename missing"
+						else
+							updateLastFilesConfig 'del', params.fn
 	catch e
 		console.log e.stack
 		out = e.message
@@ -78,15 +83,19 @@ processData = (data, method, response) ->
 	
 loadConfig = ->
 	fs.readFile ".brewer.conf", (err,data) ->
-		if err
+		try
+			if err then throw err
+			else
+				config = JSON.parse(data)
+				console.log "config loaded"
+		catch e
 			exec 'cd;pwd',(e,so,se)->
 				config.home = trim(so)
 				config.lastFiles = []
 				console.log "home folder is #{config.home}"
 				saveConfig()
-		else
-			config = JSON.parse(data)
-			console.log "config loaded"
+		
+
 
 
 saveConfig = ->
@@ -98,16 +107,17 @@ updateLastFilesConfig = (action, fn) ->
 	console.log "updateLastFileConfig #{action} #{fn}"
 	console.log "lastFiles before update:#{config.lastFiles}"
 	try
-		for i,f in config.lastFiles
+		for i,f of config.lastFiles
+			console.log "#{f} vs #{fn}"
 			if f is fn
 				if action is 'add'
 					return
 				else if action is 'del'
-					config.lastFiles.splice i
+					config.lastFiles.splice i, 1
 		if action is 'add'
 			config.lastFiles.push fn
 	finally
-		console.log "lastFiles after update:#{config.lastFiles}"	
+		console.log "lastFiles after update:#{config.lastFiles}"
 
 ############ MAIN ############
 
