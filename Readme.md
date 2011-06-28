@@ -1,3 +1,9 @@
 Brewer is a paned coffeescript editor (much like the one found on the coffeescript website) that uses the ace editor for syntax highlighting etc and nodejs to provide saving functionality.
 
-To use download the ace editor from github and place these files in the build folder.  I will clean this up a bit in the coming weeks as I work on packaging it better as a standalone app.
+To use, checkout Brewer and then init the submodules:
+
+	git clone https://rbrcurtis@github.com/rbrcurtis/Brewer.git
+	cd Brewer
+	git submodule update --init
+
+Then you can run the Brewer.sh script which should work fine on linux and mac machines using Firefox, or run the server.coffee script manually and point your browser to http://localhost:8000
