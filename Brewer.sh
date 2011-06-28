@@ -1,5 +1,4 @@
 #!/bin/bash
-cd build
 unamestr=`uname`
 if [ "$unamestr" == 'Linux' ]; then
 	sleep 1 && /usr/bin/firefox http://localhost:8000 & 
