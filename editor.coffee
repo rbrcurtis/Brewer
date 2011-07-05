@@ -135,12 +135,13 @@ showFileDialog = (p, callback) ->
 		enterBind = (e) ->
 			code = if e.keyCode then e.keyCode else e.which
 			if code is 13
+				save path+'/'+$('#newFN').val()
 				closeDialog()
 
 		dialog.append(
 			$("<tr></tr>").append("<td>New File Name:</td>").append(
 				$("<td></td>").append(
-					$("<input type='text' name='newFN' style='width:95%'/>").bind("keydown",enterBind)
+					$("<input type='text' id='newFN' style='width:95%'/>").bind("keydown",enterBind)
 				)
 			)
 		)
@@ -157,7 +158,10 @@ showFileDialog = (p, callback) ->
 		dialog.center()
 
 
-save = (file) ->
+save = (@file) ->
+	@path = file.substring(0,file.lastIndexOf('/'))
+	@fn = file.substring(file.lastIndexOf('/')+1)
+	document.title = "* "+fn
 	sendReq {action:'save', content:@editor.getSession().getValue(), fn:file}, 'POST', (data,err) ->
 		# debug 'save returned'
 		if err then debug err
