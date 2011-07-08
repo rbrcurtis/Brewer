@@ -1,6 +1,6 @@
 #members
 @input = $('#input')
-@body = $('body')
+@html = $('html')
 @debugDiv = $('#debug')
 @editor = ace.edit "input"
 @output = ace.edit "output"
@@ -154,7 +154,7 @@ showFileDialog = (p, callback) ->
 		        )
 		    )
 		)
-		@body.append dialog
+		@html.append dialog
 		dialog.center()
 
 
@@ -228,7 +228,7 @@ specialKeyBind = (e) =>
 		@timer = null
 	@timer = setTimeout ( ->compile() ), 500
 
-@body.bind 'keypress keydown', specialKeyBind
+@html.bind 'keypress keydown', specialKeyBind
 
 getConfig = (cb) ->
 	sendReq {action:"getConfig"}, 'POST', (data) ->
