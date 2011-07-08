@@ -7,7 +7,7 @@
 @timer = null
 dialogIsOpen = false
 dialog = $("<table id='dialog'></table>")
-path = null
+@path = null
 @file = null
 
 #functions
@@ -73,19 +73,19 @@ closeDialog = ->
 
 
 showFileDialog = (p, callback) ->
-	path = p
-	path = path.replace "//", "/"
+	@path = p
+	@path = @path.replace "//", "/"
 	dialogIsOpen = true
-	debug "show save window:#{path}"
-	sendReq {action:'fileList',path:path}, 'POST', (data) ->
+	debug "show save window:#{@path}"
+	sendReq {action:'fileList',path:@path}, 'POST', (data) ->
 		# debug "save window file list:#{data}"
 		table = $("<table cellspacing='2' cellpadding='2' id='filebrowser'></table>")
 		table.append("<colgroup><col span='1'/><col span='1' style='width:100px;'/></colgroup>")
 		table.append("<thead><tr><th>file/dir name</th><th>type</th></tr></thead>")
 
 		do ->
-			if path is "/" then return
-			up = path
+			if @path is "/" then return
+			up = @path
 			if up isnt "/" and up.match "/$"
 				up = up.substring 0, up.length-1
 			
@@ -117,11 +117,11 @@ showFileDialog = (p, callback) ->
 				if type is 'directory'
 					cb = (file) -> 
 						closeDialog()
-						showFileDialog("#{path}/#{file}", callback)
+						showFileDialog("#{@path}/#{file}", callback)
 				else if type is 'file'
 					cb = (file) ->
 						closeDialog()
-						callback("#{path}/#{file}")
+						callback("#{@path}/#{file}")
 					
 				table.append(
 					$("<tr></tr>")
@@ -135,7 +135,7 @@ showFileDialog = (p, callback) ->
 		enterBind = (e) ->
 			code = if e.keyCode then e.keyCode else e.which
 			if code is 13
-				save path+'/'+$('#newFN').val()
+				save @path+'/'+$('#newFN').val()
 				closeDialog()
 
 		dialog.append(
@@ -182,8 +182,8 @@ open = (file) ->
 			@editor.getSession().setValue(data.content)
 			compile(false)
 			@file = file
-			path = file.substring(0,file.lastIndexOf('/'))
-			fn = file.substring(file.lastIndexOf('/')+1)
+			@path = file.substring(0,file.lastIndexOf('/'))
+			@fn = file.substring(file.lastIndexOf('/')+1)
 			document.title = fn
 
 close = ->
@@ -201,14 +201,14 @@ specialKeyBind = (e) =>
 				window.open "http://localhost:8000?file=none"
 			
 			when 79 #O
-				showFileDialog(path, open)
+				showFileDialog(@path, open)
 			
 			when 83 
 				if @file? and !e.shiftKey
 					save(@file)
 				else
 					# serverLog "save stuff:#{@file} #{e.shiftKey}"
-					showFileDialog(path, save) #S
+					showFileDialog(@path, save) #S
 			
 			when 87 #W - close tab
 				close()
@@ -230,6 +230,11 @@ specialKeyBind = (e) =>
 
 @body.bind 'keypress keydown', specialKeyBind
 
+getConfig = (cb) ->
+	sendReq {action:"getConfig"}, 'POST', (data) ->
+		@path = data.config.home
+		if cb? then cb(data)
+
 
 if m = window.location.href.match /^[^?]+?.*file=([^&]+)/
 	if window.referrer isnt "http://localhost:8000/" and window.referrer isnt undefined
@@ -238,16 +243,16 @@ if m = window.location.href.match /^[^?]+?.*file=([^&]+)/
 	else if m[1] isnt "none"
 			open m[1]
 
+	else
+		getConfig()
 else
-	sendReq {action:"getConfig"}, 'POST', (data) ->
-		path = data.config.home
+	getConfig (data) ->
 		if data.config.lastFiles?
 			for i,f of data.config.lastFiles
 				if i is "0"
 					open f
 				else 
 					window.open "http://localhost:8000?file=#{f}"
-
 
 
 
