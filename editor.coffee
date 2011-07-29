@@ -18,12 +18,12 @@ compile = (updateTitle = true) ->
 	try
 		compiled = CoffeeScript.compile(@editor.getSession().getValue(), bare:on)
 		@output.getSession().setValue(compiled)
-		@debugDiv.html("")
+		@debugDiv.html "-"
 		if updateTitle and !document.title.match /^\*/
 			document.title = "* #{document.title}"
 	catch error
 		msg = error.message
-		@debugDiv.html(msg)
+		@debugDiv.html("<span style='color:red'>#{msg}</span>")
 		# line = msg.match(/line ([0-9]+)/)
 		# if line isnt null and line.length > 0
 			
@@ -49,13 +49,13 @@ serverLog = (msg) ->
 
 
 debug = (msg) ->
-	if typeof(sg) is "object" 
+	if typeof msg is 'object'
 		for key,val of msg
 			debug "\t#{key}=#{val}"
-	else 
-		@debugDiv.html "#{@debugDiv.html()}\n#{msg}"
+	else
+		@debugDiv.html "#{@debugDiv.html()}<br/>\n#{msg}"
 	# serverLog msg
-	@debugDiv.scrollTop debugDiv[0].scrollHeight
+	@debugDiv.scrollTop @debugDiv[0].scrollHeight
 
 
 jQuery.fn.center = ->
@@ -131,10 +131,18 @@ showFileDialog = (p, callback) ->
 							$("<td>#{type}</td>").click(->cb(file))
 						)
 				)
+				
+		#current path box
+		dialog.append(
+			$("<tr></tr>").append("<td colspan='2' align='center'>#{@path}</td>")
+		)
+
 		
-		enterBind = (e) ->
+		#filename input box
+		enterBind = (e) =>
 			code = if e.keyCode then e.keyCode else e.which
 			if code is 13
+				debug "enter pressed for "+@path+'/'+$('#newFN').val()
 				save @path+'/'+$('#newFN').val()
 				closeDialog()
 
@@ -159,6 +167,7 @@ showFileDialog = (p, callback) ->
 
 
 save = (@file) ->
+	debug "saving #{@file}"
 	@path = file.substring(0,file.lastIndexOf('/'))
 	@fn = file.substring(file.lastIndexOf('/')+1)
 	document.title = "* "+fn
@@ -190,49 +199,58 @@ close = ->
 	if @file?
 		sendReq {action:'close', fn:@file}, 'POST'
 		#no callback because the window will be closed
+		
 
-specialKeyBind = (e) =>
-	code = if e.keyCode then e.keyCode else e.which
-	if code is 27 and dialogIsOpen
-		closeDialog()
-	if e.metaKey
-		switch code
-			when 78 #N - new
-				window.open "http://localhost:8000?file=none"
-			
-			when 79 #O
-				showFileDialog(@path, open)
-			
-			when 83 
-				if @file? and !e.shiftKey
-					save(@file)
-				else
-					# serverLog "save stuff:#{@file} #{e.shiftKey}"
-					showFileDialog(@path, save) #S
-			
-			when 87 #W - close tab
-				close()
-				return
-			
-			else return
-			
-		e.preventDefault()
-		e.stopPropagation()
-		# debug code
-		# return false
+isBetweenDoubleQuotes = ->
+	pos = editor.getCursorPosition()
+	line = editor.getSession().getLine(pos.row)
+	i = line.indexOf('"')
+	j = line.lastIndexOf('"')
+	if i>-1 and j>-1 and i<pos.column<=j
+		between = true
+	else between = false
 
-#main 
-@editor.getSession().on 'change', ->
-	if @timer?
-		clearTimeout @timer
-		@timer = null
-	@timer = setTimeout ( ->compile() ), 500
+	return between
 
-@html.bind 'keypress keydown', specialKeyBind
+isBetweenAnyQuotes = ->
+	pos = editor.getCursorPosition()
+	line = editor.getSession().getLine(pos.row)
+	i = line.indexOf('"')
+	j = line.lastIndexOf('"')
+	if i is -1 and j is -1
+		i = line.indexOf("'")
+		j = line.lastIndexOf("'")
+	if i>-1 and j>-1 and i<pos.column<=j
+		between = true
+	else between = false
+
+	return between
+
+
+surroundSelection = (before, after) ->
+	s = editor.getSelectionRange()
+	start = s.start
+	end = s.end
+	selection = editor.selection
+	pos = selection.getCursor()
+	selection.clearSelection()
+	selection.moveCursorToPosition end
+	editor.insert after
+	selection.moveCursorToPosition start
+	editor.insert before
+	# if start.column isnt end.column
+	start.column = start.column+before.length
+	end.column = end.column+before.length
+	pos.column = pos.column+before.length
+	if pos.column is start.column
+		selection.setSelectionRange(start:start,end:end)
+	else
+		selection.setSelectionRange(end:end,start:start)
 
 getConfig = (cb) ->
 	sendReq {action:"getConfig"}, 'POST', (data) ->
 		@path = data.config.home
+		debug "path is #{@path}"
 		if cb? then cb(data)
 
 
@@ -256,11 +274,124 @@ else
 
 
 
+#main 
+@editor.getSession().on 'change', ->
+	if @timer?
+		clearTimeout @timer
+		@timer = null
+	@timer = setTimeout ( ->compile() ), 500
+	
+@output.getSession().on 'change', ->
+	o = $("#output .ace_scroller")
+	setTimeout ( -> o.scrollLeft 0 ), 500
+	
 
-# @input.bind 'keyup', (e)->
-	# e.preventDefault()
-	# e.stopPropagation()
-	# @output.html ""
+@html.bind 'keypress keydown', (e) =>
+	code = if e.keyCode then e.keyCode else e.which
+	if code is 27 and dialogIsOpen
+		closeDialog()
+	if e.metaKey || e.ctrlKey
+		switch code
+			when 69 #E - debugging
+				debug ""
+			when 78 #N - new
+				window.open "http://localhost:8000?file=none"
+
+			when 79 #O
+				showFileDialog(@path, open)
+
+			when 83 #S
+				if @file? and !e.shiftKey
+					save(@file)
+				else
+					showFileDialog(@path, save)
+
+			when 87 #W - close tab
+				close()
+				return
+				
+			when 191 #/
+				e.preventDefault()
+				e.stopPropagation()
+			
+				s = editor.getSelectionRange()
+				start = s.start
+				end = s.end
+				selection = editor.selection
+				pos = selection.getCursor()
+				
+				commenting = []
+				for i in [start.row..end.row]
+					selection.moveCursorToPosition(row:i,column:0)
+					selection.clearSelection()
+					if editor.getSession().getLine(i).charAt(0) is '#'
+						commenting[i] = false
+						editor.removeRight()
+					else
+						commenting[i] = true
+						editor.insert "#"
+				
+				if commenting[pos.row] then pos.column++ else pos.column--
+				if commenting[start.row] and start.column isnt 0 then start.column++ else start.column--
+				if commenting[end.row] then end.column++ else end.column--
+
+
+				if pos.row is start.row
+					debug "move to start:#{pos.row}"
+					selection.moveCursorToPosition(pos)
+					selection.setSelectionRange(start:end,end:start)
+				else
+					debug "move to end:#{pos.row}"
+					selection.moveCursorToPosition(pos)
+					selection.setSelectionRange(start:start,end:end)
+
+			else return
+
+		e.preventDefault()
+		e.stopPropagation()
+		# debug code
+		# return false
+
+
+@input.bind 'keydown', (e) ->
+	code = if e.keyCode then e.keyCode else e.which
+	if code is 27 and dialogIsOpen
+		closeDialog()
+	if !e.metaKey and !e.ctrlKey and !e.altKey
+		debug code
+		if e.shiftKey
+			switch code
+				when 51 # #
+					if isBetweenDoubleQuotes()
+						e.preventDefault()
+						e.stopPropagation()
+						surroundSelection '#{','}'
+					else return
+				when 57 # (
+					if !isBetweenAnyQuotes()
+						e.preventDefault()
+						e.stopPropagation()
+						surroundSelection '(',')'
+					else return
+				when 219 # {
+					if !isBetweenAnyQuotes()
+						e.preventDefault()
+						e.stopPropagation()
+						surroundSelection '{','}'
+					else return
+				else return
+		else
+			switch code
+				when 219 # [
+					if !isBetweenAnyQuotes()
+						e.preventDefault()
+						e.stopPropagation()
+						surroundSelection '[',']'
+					else return
+
+
+
+
 
 #@editor.setTheme "ace/theme/twilight"
 
@@ -275,4 +406,5 @@ JavaScriptMode = require("ace/mode/javascript").Mode
 
 if @editor.getSession().getValue()?
 	compile()
+
 

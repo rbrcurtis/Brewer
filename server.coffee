@@ -39,7 +39,7 @@ processData = (data, method, response) ->
 									continue
 								list[f] = if stats.isDirectory() then 'directory' else 'file'
 							catch e
-								console.err e
+								console.log e
 						out = list 
 						console.log("got file list:#{out.toString()}")
 					when 'log'

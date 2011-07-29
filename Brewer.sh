@@ -5,6 +5,6 @@ if [ "$unamestr" == 'Linux' ]; then
 elif [ "$unamestr" == 'FreeBSD' ]; then
    sleep 1 && /usr/bin/firefox http://localhost:8000 & 
 elif [ "$unamestr" == 'Darwin' ]; then
-	sleep 1 && open -a Firefox http://localhost:8000 & 
+	sleep 1 && open -a Brewer &
 fi 
 ./server.coffee
