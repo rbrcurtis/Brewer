@@ -2,7 +2,7 @@ Brewer is a paned coffeescript editor (much like the one found on the coffeescri
 
 To use, checkout Brewer and then init the submodules:
 
-	git clone https://rbrcurtis@github.com/rbrcurtis/Brewer.git
+	git clone https://github.com/rbrcurtis/Brewer.git
 	cd Brewer
 	git submodule update --init
 
