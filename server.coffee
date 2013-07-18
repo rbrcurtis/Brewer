@@ -1,4 +1,4 @@
-#!/usr/bin/env /usr/local/bin/coffee
+#!/usr/bin/env coffee
 
 sys = require 'sys'
 fs = require 'fs'
