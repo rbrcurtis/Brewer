@@ -1,7 +1,7 @@
 #!/bin/bash
 unamestr=`uname`
 if [ "$unamestr" == 'Linux' ]; then
-	sleep 1 && /usr/bin/firefox http://localhost:8000 & 
+	sleep 1 && xdg-open http://localhost:8000 & 
 elif [ "$unamestr" == 'FreeBSD' ]; then
    sleep 1 && /usr/bin/firefox http://localhost:8000 & 
 elif [ "$unamestr" == 'Darwin' ]; then
